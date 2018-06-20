@@ -8,6 +8,7 @@ from apiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
 from datetime import datetime, timedelta
+import base64
 
 # Setup the Gmail API
 SCOPES = 'https://www.googleapis.com/auth/gmail.readonly'
@@ -19,7 +20,7 @@ if not creds or creds.invalid:
 service = build('gmail', 'v1', http=creds.authorize(Http()))
 
 #Labels we are interested in
-label_ids=['INBOX', 'UNREAD']
+label_ids=['INBOX', 'UNREAD','STARRED']
 # Call the Gmail API
 
 #Will retrieve all unread email messages from the inbox
@@ -48,6 +49,35 @@ def list_recent_messages():
             list_of_recent_message_ids.append(id['id'])
         else:
             pass
+    print(list_of_recent_message_ids)
     return list_of_recent_message_ids
 
-list_recent_messages()
+def retrieve_contents_of_message():
+        message = service.users().messages().get(userId='me', id='1641ddbf61f6b5fc').execute()
+        msg_content={}
+        headers=message['payload']['headers']
+
+        for i in headers:
+            if i['name'] == 'Subject':
+                msg_content['Subject'] = i['value']
+            elif i['name'] == 'Date':
+                msg_content['Date'] = i['value']
+            elif i['name'] == 'From':
+                msg_content['From'] = i['value']
+            else:
+                pass
+
+        print(msg_content)
+#Used to parse the message to get the body. Will only be used for NLTK purposes. Referenced https://stackoverflow.com/questions/34514629/new-python-gmail-api-only-retrieve-messages-from-yesterday
+def message_converter(message_id):
+        message = service.users().messages().get(userId='me', id=message_id,format='raw').execute()
+        msg_str = str(base64.urlsafe_b64decode(message['raw'].encode('ASCII')),'UTF-8')
+        mime_msg = email.message_from_string(msg_str)
+        if mime_msg.is_multipart():
+            for payload in mime_msg.get_payload():
+                # if payload.is_multipart(): ...
+                print (payload.get_payload())
+        else:
+            print (mime_msg.get_payload())
+
+retrieve_contents_of_message()
