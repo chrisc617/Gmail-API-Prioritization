@@ -9,6 +9,9 @@ from httplib2 import Http
 from oauth2client import file, client, tools
 from datetime import datetime, timedelta
 import base64
+import email
+
+
 
 # Setup the Gmail API
 SCOPES = 'https://www.googleapis.com/auth/gmail.readonly'
@@ -20,13 +23,12 @@ if not creds or creds.invalid:
 service = build('gmail', 'v1', http=creds.authorize(Http()))
 
 #Labels we are interested in
-label_ids=['INBOX', 'UNREAD','STARRED']
+label_ids=['UNREAD','INBOX']
 # Call the Gmail API
 
 #Will retrieve all unread email messages from the inbox
 def initial_list_of_messages():
     response = service.users().messages().list(userId='me', labelIds=label_ids).execute()
-
     list_of_message_ids = response.get('messages')
     return list_of_message_ids
 
@@ -49,11 +51,10 @@ def list_recent_messages():
             list_of_recent_message_ids.append(id['id'])
         else:
             pass
-    print(list_of_recent_message_ids)
     return list_of_recent_message_ids
 
-def retrieve_contents_of_message():
-        message = service.users().messages().get(userId='me', id='1641ddbf61f6b5fc').execute()
+def retrieve_contents_of_message(message_id):
+        message = service.users().messages().get(userId='me', id=message_id).execute()
         msg_content={}
         headers=message['payload']['headers']
 
@@ -66,8 +67,15 @@ def retrieve_contents_of_message():
                 msg_content['From'] = i['value']
             else:
                 pass
-
-        print(msg_content)
+        msg_content['Snippet']=message['snippet']
+        info= f'''
+        ---------------------------------------------------------------------------------------------------------------
+        Date: {msg_content['Date']}
+        From: {msg_content['From']}
+        Subject: {msg_content['Subject']}
+        Snippet: {msg_content['Snippet']}
+        --------------------------------------------------------------------------------------------------------------- '''
+        print(info)
 #Used to parse the message to get the body. Will only be used for NLTK purposes. Referenced https://stackoverflow.com/questions/34514629/new-python-gmail-api-only-retrieve-messages-from-yesterday
 def message_converter(message_id):
         message = service.users().messages().get(userId='me', id=message_id,format='raw').execute()
@@ -80,4 +88,5 @@ def message_converter(message_id):
         else:
             print (mime_msg.get_payload())
 
-retrieve_contents_of_message()
+for message in list_recent_messages():
+    retrieve_contents_of_message(message)
