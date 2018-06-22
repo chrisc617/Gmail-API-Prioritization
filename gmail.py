@@ -1,8 +1,4 @@
-"""
-Shows basic usage of the Gmail API.
 
-Lists the user's Gmail labels.
-"""
 from __future__ import print_function
 from apiclient.discovery import build
 from httplib2 import Http
@@ -10,6 +6,10 @@ from oauth2client import file, client, tools
 from datetime import datetime, timedelta
 import base64
 import email
+from nltk.tokenize import RegexpTokenizer,word_tokenize
+from nltk.corpus import stopwords
+from collections import Counter
+from nltk.util import ngrams
 
 
 
@@ -83,10 +83,29 @@ def message_converter(message_id):
         mime_msg = email.message_from_string(msg_str)
         if mime_msg.is_multipart():
             for payload in mime_msg.get_payload():
-                # if payload.is_multipart(): ...
-                print (payload.get_payload())
-        else:
-            print (mime_msg.get_payload())
+                try:
+                    if payload.get_content_type() == 'text/plain': #referenced Stackoverflow so that I could parse through and only receive text back https://stackoverflow.com/questions/1463074/how-can-i-get-an-email-messages-text-content-using-python
+                        return (payload.get_payload())
+                except:
+                    pass
+
+bucket_of_words=[]
+def word_tokenizer(input):
+    try:
+        tokenizer = RegexpTokenizer(r'\w+')
+        stop_words=set(stopwords.words('english'))
+        stop_words.update(['html','com','https','unsubscribe','http','subject',''])
+        wordlist=tokenizer.tokenize(input)
+        bigrams = ngrams(wordlist, 2)
+        wordlist=[w.lower() for w in wordlist]
+        keywords=[w for w in wordlist if w not in stop_words]
+        listz=Counter(keywords)
+        for i in listz:
+            bucket_of_words.append(i)
+    except:
+        pass
+
 
 for message in list_recent_messages():
-    retrieve_contents_of_message(message)
+    word_tokenizer(message_converter(message))
+print(Counter(bucket_of_words))
