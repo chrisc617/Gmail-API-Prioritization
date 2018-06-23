@@ -23,7 +23,7 @@ if not creds or creds.invalid:
 service = build('gmail', 'v1', http=creds.authorize(Http()))
 
 #Labels we are interested in
-label_ids=['UNREAD','INBOX']
+label_ids=['UNREAD','INBOX','STARRED']
 # Call the Gmail API
 
 #Will retrieve all unread email messages from the inbox
@@ -90,22 +90,24 @@ def message_converter(message_id):
                     pass
 
 bucket_of_words=[]
+#This function was written to append each word into my final list that is not a stop word. NLTK documentation was reviewed.
 def word_tokenizer(input):
     try:
         tokenizer = RegexpTokenizer(r'\w+')
         stop_words=set(stopwords.words('english'))
-        stop_words.update(['html','com','https','unsubscribe','http','subject',''])
+        stop_words.update(['html','com','https','unsubscribe','http','subject'])
         wordlist=tokenizer.tokenize(input)
-        bigrams = ngrams(wordlist, 2)
         wordlist=[w.lower() for w in wordlist]
-        keywords=[w for w in wordlist if w not in stop_words]
-        listz=Counter(keywords)
-        for i in listz:
+        keywords=[w for w in wordlist if w not in stop_words and len(w)>1]
+        for i in keywords:
             bucket_of_words.append(i)
     except:
         pass
 
+#This script will return the five most common words from our messages.
+def most_common_words():
+    for message in list_recent_messages():
+        word_tokenizer(message_converter(message))
+    print(Counter(bucket_of_words).most_common(5))
 
-for message in list_recent_messages():
-    word_tokenizer(message_converter(message))
-print(Counter(bucket_of_words))
+most_common_words()
