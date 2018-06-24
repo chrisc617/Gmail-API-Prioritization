@@ -16,7 +16,9 @@ Step 1: Turn on the Gmail API
 Step 2: Install the Google Client Library
 * Run the following command to install the library using pip:
 
+```sh
 pip install --upgrade google-api-python-client
+```
 * See the library's installation page for the alternative installation options.
 
 
