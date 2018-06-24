@@ -21,7 +21,7 @@ pip install --upgrade google-api-python-client
 ```
 * See the library's installation page for the alternative installation options.
 
-
+* MAke sure you save your client_secret.json and credentials.json files in the same directory as the code and under a files folder
 
 # Requirements
 Install package dependencies using one of the following commands, depending on how you have installed Python and how you are managing packages:
@@ -44,3 +44,9 @@ As the same with the instructions from the Google Developers site, your client_s
 In order for the application to function properly, you must have emails under your 'STARRED' label and 'UNREAD' in your 'INBOX'. If your most important emails are stored under a separate label, update variable **important_ids**, which can be found in line 25, to the label of your choice.
 
 Messages will be pulled from your unread inbox. If you have no unread messages, then the code will not pull anything.
+
+# Running
+To run in windows:
+```sh
+python gmail.py
+
