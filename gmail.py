@@ -1,5 +1,4 @@
 
-from __future__ import print_function
 from apiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
@@ -8,7 +7,7 @@ import base64
 import email
 from nltk.tokenize import RegexpTokenizer,word_tokenize
 from nltk.corpus import stopwords
-from collections import Counter
+from collections import Counter, OrderedDict
 from nltk.util import ngrams
 
 
@@ -25,7 +24,7 @@ service = build('gmail', 'v1', http=creds.authorize(Http()))
 #Labels we are interested in
 label_ids=['UNREAD','INBOX']
 important_ids=['STARRED']
-# Call the Gmail API
+
 
 #Will retrieve all unread email messages from the inbox. You have to select which labels you want to select from
 def initial_list_of_messages(a):
@@ -52,45 +51,45 @@ def list_recent_messages(a):
             list_of_recent_message_ids.append(id['id'])
         else:
             pass
-    print(list_of_recent_message_ids)
+    # print(list_of_recent_message_ids)
     return list_of_recent_message_ids
 
 def retrieve_contents_of_message(message_id):
-        message = service.users().messages().get(userId='me', id=message_id).execute()
-        msg_content={}
-        headers=message['payload']['headers']
+    message = service.users().messages().get(userId='me', id=message_id).execute()
+    msg_content={}
+    headers=message['payload']['headers']
 
-        for i in headers:
-            if i['name'] == 'Subject':
-                msg_content['Subject'] = i['value']
-            elif i['name'] == 'Date':
-                msg_content['Date'] = i['value']
-            elif i['name'] == 'From':
-                msg_content['From'] = i['value']
-            else:
-                pass
-        msg_content['Snippet']=message['snippet']
-        info= f'''
-        ---------------------------------------------------------------------------------------------------------------
-        Date: {msg_content['Date']}
-        From: {msg_content['From']}
-        Subject: {msg_content['Subject']}
-        Snippet: {msg_content['Snippet']}
-        --------------------------------------------------------------------------------------------------------------- '''
-        print(info)
+    for i in headers: #Referred to https://github.com/denglert to help pull the correct fields
+        if i['name'] == 'Subject':
+            msg_content['Subject'] = i['value']
+        elif i['name'] == 'Date':
+            msg_content['Date'] = i['value']
+        elif i['name'] == 'From':
+            msg_content['From'] = i['value']
+        else:
+            pass
+    msg_content['Snippet']=message['snippet']
+    info= f'''
+    ---------------------------------------------------------------------------------------------------------------
+    Date: {msg_content['Date']}
+    From: {msg_content['From']}
+    Subject: {msg_content['Subject']}
+    Snippet: {msg_content['Snippet']}
+    --------------------------------------------------------------------------------------------------------------- '''
+    print(info)
 #Used to parse the message to get the body. Will only be used for NLTK purposes. Referenced https://stackoverflow.com/questions/34514629/new-python-gmail-api-only-retrieve-messages-from-yesterday
 def message_converter(message_id):
-        message = service.users().messages().get(userId='me', id=message_id,format='raw').execute()
-        msg_str = str(base64.urlsafe_b64decode(message['raw'].encode('ASCII')),'UTF-8')
-        mime_msg = email.message_from_string(msg_str)
-        if mime_msg.is_multipart():
-            for payload in mime_msg.get_payload():
-                try:
-                    if payload.get_content_type() == 'text/plain': #referenced Stackoverflow so that I could parse through and only receive text back https://stackoverflow.com/questions/1463074/how-can-i-get-an-email-messages-text-content-using-python
-                        print(payload.get_payload())
-                        return (payload.get_payload())
-                except:
-                    pass
+    message = service.users().messages().get(userId='me', id=message_id,format='raw').execute()
+    msg_str = str(base64.urlsafe_b64decode(message['raw'].encode('ASCII')),'UTF-8')
+    mime_msg = email.message_from_string(msg_str)
+    if mime_msg.is_multipart():
+        for payload in mime_msg.get_payload():
+            try:
+                if payload.get_content_type() == 'text/plain': #referenced Stackoverflow so that I could parse through and only receive text back https://stackoverflow.com/questions/1463074/how-can-i-get-an-email-messages-text-content-using-python
+                    # print(payload.get_payload())
+                    return (payload.get_payload())
+            except:
+                pass
 
 bucket_of_words=[]
 #This function was written to append each word into my final list that is not a stop word. NLTK documentation was reviewed.
@@ -111,24 +110,28 @@ def word_tokenizer(input,wordbucket=bucket_of_words):
 def most_common_words():
     for message in initial_list_of_messages(important_ids):
         word_tokenizer(message_converter(message['id']))
-    print(Counter(bucket_of_words).most_common(10))
+    # print(Counter(bucket_of_words).most_common(10))
     return (Counter(bucket_of_words).most_common(10))
 
-# important_words=most_common_words()
-# msg_importance={}
-# for messages in list_recent_messages(label_ids):
-#     count=0
-#     bucket_of_all_words=[]
-#     word_tokenizer(message_converter(messages),bucket_of_all_words)
-#     for i in important_words:
-#         if i[0] in bucket_of_all_words:
-#             count +=int(i[1])
-#     msg_importance[messages]=count
-# print(msg_importance)
-#
+#Calculates importance of message by how many keywords it hits. The most important words are factored more predominantly(by the frequency they occured in)
+#Each occurence of the word in the message is only counted once, weight of message is determined by inclusion of key words, not its frequency.
+def calculate_importance():
+    important_words=most_common_words()
+    msg_importance={}
+    for messages in list_recent_messages(label_ids):
+        count=0
+        bucket_of_all_words=[]
+        word_tokenizer(message_converter(messages),bucket_of_all_words)
+        for i in important_words:
+            if i[0] in bucket_of_all_words:
+                count +=int(i[1])
+        if count>0:
+            msg_importance[messages]=count
+    return msg_importance
+#Reorder dictionary by highest score
+def run():
+    msg_order = OrderedDict(sorted(calculate_importance().items(), key=lambda x: x[1],reverse=True)) # Referenced following link for method. http://thomas-cokelaer.info/blog/2017/12/how-to-sort-a-dictionary-by-values-in-python/
+    for msg in msg_order:
+        retrieve_contents_of_message(msg)
 
-
-
-# for i in most_common_words():
-#     print(i[0])
-message_converter('1642ea686349277d')
+run()
