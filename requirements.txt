@@ -1,0 +1,10 @@
+apiclient.discovery
+httplib2
+oauth2client
+datetime
+base64
+email
+nltk.tokenize 
+nltk.corpus 
+collections 
+ 
