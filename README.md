@@ -21,7 +21,7 @@ pip install --upgrade google-api-python-client
 ```
 * See the library's installation page for the alternative installation options.
 
-* MAke sure you save your client_secret.json and credentials.json files in the same directory as the code and under a files folder
+* MAke sure you save your client_secret.json and credentials.json files in the same directory as the code and under the files folder
 
 # Requirements
 Install package dependencies using one of the following commands, depending on how you have installed Python and how you are managing packages:
